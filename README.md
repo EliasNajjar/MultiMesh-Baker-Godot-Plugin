@@ -13,3 +13,8 @@ Godot 4 editor plugin to bake and unbake MultiMeshes from your scene.
 
 2. In Godot, go to: **Project → Project Settings → Plugins**
 3. Enable MultiMesh Baker
+
+## Usage
+The plugin create button in the 2D and 3D editor menus labelled Meshes <-> MultiMesh.  
+When pressed, if a MultimeshInstance2D/3D node is selected, it will create a Node2D/3D with individual meshes for each instance as children.  
+Otherwise, it looks at the children of the selected node, and creates a multimesh based on the meshes inside. The meshes must be the same mesh but can have different transformations.

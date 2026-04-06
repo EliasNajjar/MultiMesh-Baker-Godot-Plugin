@@ -1,4 +1,7 @@
-func _on_bake_pressed() -> void:
+@tool
+extends Node
+
+func _on_bake_to_multimesh_pressed() -> void:
 	var selected = EditorInterface.get_selection().get_selected_nodes()
 	if selected.size() != 1:
 		push_warning("MultiMesh Baker: Select 1 node.")
@@ -6,87 +9,12 @@ func _on_bake_pressed() -> void:
 
 	var node: Node = selected.front()
 	var scene_root: Node = node.get_tree().edited_scene_root
-	var is_scene_root := node == scene_root
+	var is_scene_root := node == node.get_tree().edited_scene_root
 	var parent: Node = node if is_scene_root else node.get_parent()
 	var undo: EditorUndoRedoManager = EditorInterface.get_editor_undo_redo()
 	var insert_index := -1
 	if not is_scene_root:
 		insert_index = node.get_index() + 1
-
-	if node is MultiMeshInstance2D: # convert MultiMeshInstance2D to meshes
-		if node.multimesh == null or node.multimesh.mesh == null:
-			push_warning("MultiMesh Baker: Selected MultiMeshInstance2D has no Mesh.")
-			return
-
-		if parent == null:
-			push_warning("MultiMesh Baker: MultiMeshInstance2D has no parent.")
-			return
-
-		var group := Node2D.new() # for meshes to go under
-		group.name = node.name + "_Meshes"
-
-		var mm: MultiMesh = node.multimesh
-		var shared_mesh: Mesh = mm.mesh
-
-		undo.create_action("Unbake MultiMesh2D to Meshes")
-
-		undo.add_do_method(parent, "add_child", group, true)
-		undo.add_do_method(group, "set_owner", scene_root)
-		if insert_index >= 0:
-			undo.add_do_method(parent, "move_child", group, insert_index)
-
-		for i in mm.instance_count: # create individual meshes
-			var child := MeshInstance2D.new()
-			child.name = "MeshInstance2D%d" % (i + 1) if i > 0 else "MeshInstance2D"
-			child.mesh = shared_mesh
-			child.global_transform = node.global_transform * mm.get_instance_transform_2d(i)
-
-			undo.add_do_method(group, "add_child", child, true)
-			undo.add_do_method(child, "set_owner", scene_root)
-			undo.add_undo_method(group, "remove_child", child)
-
-		undo.add_undo_method(parent, "remove_child", group)
-
-		undo.commit_action()
-
-		print("MultiMesh Baker: Created Node2D '%s' with %d MeshInstance2D children." % [group.name, mm.instance_count])
-		return
-
-	if node is MultiMeshInstance3D:
-		if node.multimesh == null or node.multimesh.mesh == null:
-			push_warning("MultiMesh Baker: Selected MultiMeshInstance3D has no Mesh.")
-			return
-
-		var group := Node3D.new() # for meshes to go under
-		group.name = node.name + "_Meshes"
-
-		var mm: MultiMesh = node.multimesh
-		var shared_mesh: Mesh = mm.mesh
-
-		undo.create_action("Unbake MultiMesh3D to Meshes")
-
-		undo.add_do_method(parent, "add_child", group, true)
-		undo.add_do_method(group, "set_owner", scene_root)
-		if insert_index >= 0:
-			undo.add_do_method(parent, "move_child", group, insert_index)
-
-		for i in mm.instance_count: # create individual meshes
-			var child := MeshInstance3D.new()
-			child.name = "MeshInstance3D%d" % (i + 1) if i > 0 else "MeshInstance3D"
-			child.mesh = shared_mesh
-			child.global_transform = node.global_transform * mm.get_instance_transform(i)
-
-			undo.add_do_method(group, "add_child", child, true)
-			undo.add_do_method(child, "set_owner", scene_root)
-
-			undo.add_undo_method(group, "remove_child", child)
-
-		undo.add_undo_method(parent, "remove_child", group)
-
-		undo.commit_action()
-
-		print("MultiMesh Baker: Created Node3D '%s' with %d MeshInstance3D children." % [group.name, mm.instance_count])
-		return
 
 	if node.get_child_count() == 0:
 		push_warning("MultiMesh Baker: Selected node has no children.")
@@ -168,3 +96,99 @@ func _on_bake_pressed() -> void:
 		undo.commit_action()
 
 		print("MultiMesh Baker: Created MultiMeshInstance3D '%s' with %d instances." % [mmi.name, children.size()])
+
+
+func _on_unbake_to_meshes_pressed() -> void:
+	var selected = EditorInterface.get_selection().get_selected_nodes()
+	if selected.size() != 1:
+		push_warning("MultiMesh Baker: Select 1 node.")
+		return
+
+	var node: Node = selected.front()
+	var scene_root: Node = node.get_tree().edited_scene_root
+	var is_scene_root := node == scene_root
+	var parent: Node = node if is_scene_root else node.get_parent()
+	var undo: EditorUndoRedoManager = EditorInterface.get_editor_undo_redo()
+	var insert_index := -1
+	if not is_scene_root:
+		insert_index = node.get_index() + 1
+
+	if node is MultiMeshInstance2D:
+		if node.multimesh == null or node.multimesh.mesh == null:
+			push_warning("MultiMesh Baker: Selected MultiMeshInstance2D has no Mesh.")
+			return
+
+		if parent == null:
+			push_warning("MultiMesh Baker: MultiMeshInstance2D has no parent.")
+			return
+
+		var group := Node2D.new()
+		group.name = node.name + "_Meshes"
+
+		var mm: MultiMesh = node.multimesh
+		var shared_mesh: Mesh = mm.mesh
+
+		undo.create_action("Unbake MultiMesh2D to Meshes")
+
+		undo.add_do_method(parent, "add_child", group, true)
+		undo.add_do_method(group, "set_owner", scene_root)
+		if insert_index >= 0:
+			undo.add_do_method(parent, "move_child", group, insert_index)
+
+		for i in mm.instance_count:
+			var child := MeshInstance2D.new()
+			child.name = "MeshInstance2D%d" % (i + 1) if i > 0 else "MeshInstance2D"
+			child.mesh = shared_mesh
+			child.global_transform = node.global_transform * mm.get_instance_transform_2d(i)
+
+			undo.add_do_method(group, "add_child", child, true)
+			undo.add_do_method(child, "set_owner", scene_root)
+			undo.add_undo_method(group, "remove_child", child)
+
+		undo.add_undo_method(parent, "remove_child", group)
+
+		undo.commit_action()
+
+		print("MultiMesh Baker: Created Node2D '%s' with %d MeshInstance2D children." % [group.name, mm.instance_count])
+		return
+
+	if node is MultiMeshInstance3D:
+		if node.multimesh == null or node.multimesh.mesh == null:
+			push_warning("MultiMesh Baker: Selected MultiMeshInstance3D has no Mesh.")
+			return
+
+		if parent == null:
+			push_warning("MultiMesh Baker: MultiMeshInstance3D has no parent.")
+			return
+
+		var group := Node3D.new()
+		group.name = node.name + "_Meshes"
+
+		var mm: MultiMesh = node.multimesh
+		var shared_mesh: Mesh = mm.mesh
+
+		undo.create_action("Unbake MultiMesh3D to Meshes")
+
+		undo.add_do_method(parent, "add_child", group, true)
+		undo.add_do_method(group, "set_owner", scene_root)
+		if insert_index >= 0:
+			undo.add_do_method(parent, "move_child", group, insert_index)
+
+		for i in mm.instance_count:
+			var child := MeshInstance3D.new()
+			child.name = "MeshInstance3D%d" % (i + 1) if i > 0 else "MeshInstance3D"
+			child.mesh = shared_mesh
+			child.global_transform = node.global_transform * mm.get_instance_transform(i)
+
+			undo.add_do_method(group, "add_child", child, true)
+			undo.add_do_method(child, "set_owner", scene_root)
+			undo.add_undo_method(group, "remove_child", child)
+
+		undo.add_undo_method(parent, "remove_child", group)
+
+		undo.commit_action()
+
+		print("MultiMesh Baker: Created Node3D '%s' with %d MeshInstance3D children." % [group.name, mm.instance_count])
+		return
+
+	push_warning("MultiMesh Baker: Select a MultiMeshInstance2D or MultiMeshInstance3D to unbake.")

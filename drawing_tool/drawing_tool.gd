@@ -11,8 +11,8 @@ var _rotate_button_3d: CheckBox
 var _vertical_rotate_button_3d: CheckBox
 var _draw_button_2d: CheckBox
 
-var baker  = preload("res://addons/multimesh_baker/bake_unbake.gd").new()
-var drawer = preload("res://addons/multimesh_baker/drawing.gd").new()
+var baker  = preload("res://addons/drawing_tool/bake_unbake.gd").new()
+var drawer = preload("res://addons/drawing_tool/drawing.gd").new()
 
 func _enter_tree() -> void:
 	EditorInterface.get_base_control().add_child(drawer)

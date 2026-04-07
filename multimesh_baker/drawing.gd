@@ -315,14 +315,37 @@ func _on_draw_layer_exited() -> void:
 func _make_placement_basis(normal: Vector3, scale: Vector3, template_basis: Basis) -> Basis:
 	if not allow_rotation:
 		return template_basis.orthonormalized() * Basis().scaled(scale)
+
+	var s := Vector3(abs(scale.x), abs(scale.y), abs(scale.z)) # use positive scale when rotation is enabled
+
+	var rot: Basis
 	if allow_vertical_rotation:
-		var right: Vector3 = normal.cross(Vector3.FORWARD if abs(normal.dot(Vector3.UP)) > 0.99 else Vector3.UP).normalized()
-		return Basis(right, normal, -right.cross(normal).normalized()) * Basis().scaled(scale)
+		var up := normal.normalized()
+		var ref := Vector3.UP
+		if abs(up.dot(ref)) > 0.99:
+			ref = Vector3.FORWARD
+
+		var right := ref.cross(up).normalized()
+		var forward := up.cross(right).normalized()
+
+		rot = Basis(right, up, forward)
 	else:
-		var fwd: Vector3 = Vector3(normal.x, 0.0, normal.z).normalized()
+		var fwd := Vector3(normal.x, 0.0, normal.z)
 		if fwd.length_squared() < 0.001:
 			fwd = Vector3.BACK
-		return Basis(Vector3.UP.cross(fwd).normalized(), Vector3.UP, -fwd) * Basis().scaled(scale)
+		else:
+			fwd = fwd.normalized()
+
+		var up := Vector3.UP
+		var right := up.cross(fwd).normalized()
+		var forward := up.cross(right).normalized()
+		rot = Basis(right, up, forward)
+
+	rot = rot.orthonormalized() # prevent negative scale
+	if rot.determinant() < 0.0:
+		rot.x = -rot.x
+
+	return rot * Basis().scaled(s)
 
 func _raycast_3d(viewport_pos: Vector2, camera: Camera3D, vp: SubViewport) -> Dictionary:
 	var world3d: World3D = vp.find_world_3d()
